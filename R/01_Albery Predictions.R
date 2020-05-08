@@ -4,7 +4,7 @@
 # Prediction ####
 
 library(ggrepel); library(tidyverse); library(SpRanger); library(cowplot); library(patchwork)
-library(ggregplot)
+library(ggregplot); library(data.table)
 
 theme_set(theme_cowplot())
 
@@ -16,7 +16,7 @@ Panth1$Sp <- Panth1$Sp %>% str_replace(" ", "_")
 
 # load("~/LargeFiles/MammalStackFullMercator.Rdata")
 
-PredictedNetwork <- fread("Data/AlberyPredicted.csv")
+PredictedNetwork <- fread("Data/AlberyPredicted.csv") %>% mutate_all(as.numeric)
 
 PredictedNetwork %>% as.matrix -> PredictedNetwork
 
@@ -24,6 +24,33 @@ PredictedNetwork <-
   PredictedNetwork[,-1]
 
 rownames(PredictedNetwork) <- colnames(PredictedNetwork)
+
+read.delim("Data/BetaCov.txt", sep = ",") ->
+
+  BetaCovHosts
+
+BetaCovHosts %>% filter(virus_genus == "Betacoronavirus") %>% 
+  pull(clean_hostnames) %>% as.character %>% 
+  intersect(rownames(PredictedNetwork)) %>% sort -> 
+  BetaCovHosts2
+
+NetworkPredict(BetaCovHosts2, (PredictedNetwork), IncludeObserved = T) %>%
+  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
+  filter(hOrder == "Chiroptera") %>% 
+  dplyr::select(1:3, Sp, Observed, hOrder, hFamily, hGenus) ->
+  
+  BetaCovPredictedBats
+
+
+BetaCovPredictedBats %>% select(Sp, Count) %>%
+  write.csv("AlberyPredicted.csv")
+
+
+NetworkValidate(BetaCovHosts2, (PredictedNetwork)) %>%
+  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
+  #filter(!hOrder == "Chiroptera") %>% 
+  dplyr::select(1:3, Sp, hOrder, hFamily, hGenus) ->
+  BetacovPredictedBats
 
 NetworkPredict(c("Rhinolophus_affinis"), (PredictedNetwork)) %>%
   as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
@@ -40,8 +67,8 @@ NetworkPredict(c("Rhinolophus_affinis"), as.matrix(PredictedNetwork)) %>%
   
   affinisPredicted
 
-saveRDS(affinisPredicted, file = "Intermediate/AlberyPredicted.rds")
-saveRDS(affinisPredictedBats, file = "Intermediate/AlberyPredictedBats.rds")
+saveRDS(affinisPredicted, file = "Intermediate/AlberyPredicted_R_affinis.rds")
+saveRDS(affinisPredictedBats, file = "Intermediate/AlberyPredictedBats_R_affinis.rds")
 
 affinisPredicted %>% nrow
 
