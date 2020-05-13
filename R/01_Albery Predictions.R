@@ -1,6 +1,8 @@
 
 # 01_Albery Predictions ####
 
+rm(list = ls())
+
 # Prediction ####
 
 library(ggrepel); library(tidyverse); library(SpRanger); library(cowplot); library(patchwork)
@@ -25,17 +27,22 @@ PredictedNetwork <-
 
 rownames(PredictedNetwork) <- colnames(PredictedNetwork)
 
-read.delim("Data/BetaCov.txt", sep = ",") ->
+read.csv("Data/Virionette/03_interaction_data/virionette.csv") ->
   
   BetaCovHosts
 
+# Bat-Specific ####
+
 BetaCovHosts %>% 
   filter(virus_genus == "Betacoronavirus") %>% 
-  pull(clean_hostnames) %>% as.character %>% 
+  filter(host_order == "Chiroptera") %>% 
+  pull(host_species) %>% as.character %>% 
+  str_trim %>%
+  str_replace_all(" ", "_") %>%
   intersect(rownames(PredictedNetwork)) %>% sort -> 
-  BetaCovHosts2
+  BetaCovBats
 
-NetworkPredict(BetaCovHosts2, (PredictedNetwork), IncludeObserved = T) %>%
+NetworkPredict(BetaCovBats, (PredictedNetwork), IncludeObserved = T) %>%
   as.data.frame() %>% 
   left_join(Panth1, by = "Sp") %>%
   filter(hOrder == "Chiroptera") %>% 
@@ -45,22 +52,33 @@ NetworkPredict(BetaCovHosts2, (PredictedNetwork), IncludeObserved = T) %>%
 
 BetaCovPredictedBats %>% 
   select(Sp, Count) %>%
-  write.csv("AlberyPredicted.csv")
+  write.csv("AlberyBats.csv")
 
-# BetaCovPredictedBats %>% write.csv("Github/CSVs/AlberyPredicted.csv", row.names = F)
+# Non-Bats ####
 
-NetworkPredict(BetaCovHosts2, (PredictedNetwork), IncludeObserved = T) %>%
-  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
-  filter(!hOrder == "Chiroptera") %>% 
+BetaCovHosts %>% 
+  filter(virus_genus == "Betacoronavirus") %>% 
+  #filter(host_order == "Chiroptera") %>% 
+  pull(host_species) %>% as.character %>% 
+  str_trim %>%
+  str_replace_all(" ", "_") %>%
+  intersect(rownames(PredictedNetwork)) %>% sort -> 
+  BetaCovMammals
+
+NetworkPredict(BetaCovMammals, (PredictedNetwork), IncludeObserved = T) %>%
+  as.data.frame() %>% 
+  left_join(Panth1, by = "Sp") %>%
+  #filter(!hOrder == "Chiroptera") %>% 
   dplyr::select(1:3, Sp, Observed, hOrder, hFamily, hGenus) ->
   
-  BetaCovPredictedNonBats
+  BetaCovPredictedMammals
 
-NetworkValidate(BetaCovHosts2, (PredictedNetwork)) %>%
-  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
-  #filter(!hOrder == "Chiroptera") %>% 
-  dplyr::select(1:3, Sp, hOrder, hFamily, hGenus) ->
-  BetacovPredictedBats
+BetaCovPredictedMammals %>% 
+  select(Sp, Count) %>%
+  write.csv("AlberyNonBats.csv")
+
+
+# R_affinis ####
 
 NetworkPredict(c("Rhinolophus_affinis"), (PredictedNetwork)) %>%
   as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
@@ -82,6 +100,8 @@ R_affinisPredictedNonBats %>% select(Sp, Count) %>%
 
 R_affinisPredictedBats %>% 
   saveRDS(file = "Intermediate/AlberyPredictedBats_R_affinis.rds")
+
+# R_malayanus ####
 
 NetworkPredict(c("Rhinolophus_malayanus"), (PredictedNetwork)) %>%
   as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
