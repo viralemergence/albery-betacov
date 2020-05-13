@@ -26,25 +26,35 @@ PredictedNetwork <-
 rownames(PredictedNetwork) <- colnames(PredictedNetwork)
 
 read.delim("Data/BetaCov.txt", sep = ",") ->
-
+  
   BetaCovHosts
 
-BetaCovHosts %>% filter(virus_genus == "Betacoronavirus") %>% 
+BetaCovHosts %>% 
+  filter(virus_genus == "Betacoronavirus") %>% 
   pull(clean_hostnames) %>% as.character %>% 
   intersect(rownames(PredictedNetwork)) %>% sort -> 
   BetaCovHosts2
 
 NetworkPredict(BetaCovHosts2, (PredictedNetwork), IncludeObserved = T) %>%
-  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
+  as.data.frame() %>% 
+  left_join(Panth1, by = "Sp") %>%
   filter(hOrder == "Chiroptera") %>% 
   dplyr::select(1:3, Sp, Observed, hOrder, hFamily, hGenus) ->
   
   BetaCovPredictedBats
 
-
-BetaCovPredictedBats %>% select(Sp, Count) %>%
+BetaCovPredictedBats %>% 
+  select(Sp, Count) %>%
   write.csv("AlberyPredicted.csv")
 
+# BetaCovPredictedBats %>% write.csv("Github/CSVs/AlberyPredicted.csv", row.names = F)
+
+NetworkPredict(BetaCovHosts2, (PredictedNetwork), IncludeObserved = T) %>%
+  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
+  filter(!hOrder == "Chiroptera") %>% 
+  dplyr::select(1:3, Sp, Observed, hOrder, hFamily, hGenus) ->
+  
+  BetaCovPredictedNonBats
 
 NetworkValidate(BetaCovHosts2, (PredictedNetwork)) %>%
   as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
@@ -56,80 +66,60 @@ NetworkPredict(c("Rhinolophus_affinis"), (PredictedNetwork)) %>%
   as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
   #filter(!hOrder == "Chiroptera") %>% 
   dplyr::select(1:3, Sp, hOrder, hFamily, hGenus) ->
-  affinisPredictedBats
+  R_affinisPredictedBats
 
-affinisPredictedBats %>% nrow
+R_affinisPredictedBats %>% nrow
 
 NetworkPredict(c("Rhinolophus_affinis"), as.matrix(PredictedNetwork)) %>%
   as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
   filter(!hOrder == "Chiroptera") %>%
   dplyr::select(1:3, Sp, hOrder, hFamily, hGenus) ->
   
-  affinisPredicted
+  R_affinisPredictedNonBats
 
-saveRDS(affinisPredicted, file = "Intermediate/AlberyPredicted_R_affinis.rds")
-saveRDS(affinisPredictedBats, file = "Intermediate/AlberyPredictedBats_R_affinis.rds")
+R_affinisPredictedNonBats %>% select(Sp, Count) %>%
+  saveRDS(file = "Intermediate/AlberyPredictedNonBats_R_affinis.rds")
 
-affinisPredicted %>% nrow
+R_affinisPredictedBats %>% 
+  saveRDS(file = "Intermediate/AlberyPredictedBats_R_affinis.rds")
 
-affinisPredicted %>% ggplot(aes(1, Count)) + geom_text(aes(label = Sp))
+NetworkPredict(c("Rhinolophus_malayanus"), (PredictedNetwork)) %>%
+  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
+  #filter(!hOrder == "Chiroptera") %>% 
+  dplyr::select(1:3, Sp, hOrder, hFamily, hGenus) ->
+  R_malayanusPredictedBats
 
-affinisPredictedBats %>%
-  ggplot(aes(Rank, Count)) +
-  labs(y = "Sharing Probability") +
-  geom_point() +
-  geom_label_repel(data = affinisPredictedBats %>% filter(Count>0.65),
-                   aes(label = Sp), xlim = c(-4000, -500)) +
-  #lims(y = c(0, 1)) +
-  scale_x_reverse(limits = c(4200, -250)) -> 
+NetworkPredict(c("Rhinolophus_malayanus"), as.matrix(PredictedNetwork)) %>%
+  as.data.frame() %>% left_join(Panth1, by = "Sp") %>%
+  filter(!hOrder == "Chiroptera") %>%
+  dplyr::select(1:3, Sp, hOrder, hFamily, hGenus) ->
   
-  BatPredictions
+  R_malayanusPredictedNonBats
 
-affinisPredicted %>%
-  ggplot(aes(Rank, Count)) +
-  labs(y = "Sharing Probability") +
-  geom_point() +
-  geom_label_repel(data = affinisPredicted %>% filter(Count>0.27),
-                   aes(label = Sp), #xlim = c(-4000, -500), #direction = "x", 
-                   force = 10) +
-  scale_x_reverse(limits = c(4200, -250)) ->
-  
-  NonBatPredictions
+R_malayanusPredictedNonBats %>% select(Sp, Count) %>%
+  saveRDS(file = "Intermediate/AlberyPredictedNonBats_R_malayanus.rds")
 
-BatPredictions/NonBatPredictions
+R_malayanusPredictedBats %>% 
+  saveRDS(file = "Intermediate/AlberyPredictedBats_R_malayanus.rds")
 
-NonBatPredictions + geom_vline(xintercept = 200)
-NonBatPredictions + geom_vline(xintercept = 400)
+R_affinisPredictedBats %>% 
+  mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
+  mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
+  slice(1:20) %>% select(Sp) %>%
+  bind_cols(R_malayanusPredictedBats %>% 
+              mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
+              mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
+              slice(1:20) %>% select(Sp)) %>%
+  rename(`R.affinis` = Sp, `R.malayanus` = Sp1) %>% 
+  write.csv("Output Files/AlberyRhinolophusBatPredictions.csv", row.names = F)
 
-affinisPredicted %>% 
-  #  filter(Rank<400) %>%
-  SinaGraph("hFamily", "Count", Order = T, Just = T, Scale = "width") + 
-  labs(y = "Mean probability") +
-  theme(legend.position = "none")
-
-affinisPredicted %>% 
-  #  filter(Rank<400) %>%
-  SinaGraph("hOrder", "Count", Order = T, Just = T, Scale = "width") + 
-  labs(y = "Mean probability") +
-  theme(legend.position = "none")
-
-affinisPredicted %>% 
-  filter(Rank<400) %>%
-  group_by(hFamily) %>% 
-  summarise(SumProbs = sum(Count), MeanProbs = mean(Count)) %>%
-  arrange(desc(MeanProbs))
-
-affinisPredicted %>% 
-  filter(Rank<200) %>%
-  group_by(hFamily) %>% 
-  summarise(N = n(),
-            SumProbs = sum(Count), 
-            MeanProbs = mean(Count)) %>%
-  arrange(desc(MeanProbs))
-
-
-affinisPredicted %>% filter(hFamily == "Mustelidae") %>%
-  SinaGraph("hGenus", "Count", Order = T, Just = T, Scale = "width")
-
-
-
+R_affinisPredictedNonBats %>% 
+  mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
+  mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
+  slice(1:20) %>% select(Sp) %>%
+  bind_cols(R_malayanusPredictedNonBats %>% 
+              mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
+              mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
+              slice(1:20) %>% select(Sp)) %>%
+  rename(`R.affinis` = Sp, `R.malayanus` = Sp1) %>% 
+  write.csv("Output Files/AlberyRhinolophusNonBatPredictions.csv", row.names = F)
