@@ -1,14 +1,17 @@
 
 # 01_Albery Predictions ####
 
-rm(list = ls())
+# rm(list = ls())
 
 # Prediction ####
 
 library(ggrepel); library(tidyverse); library(SpRanger); library(cowplot); library(patchwork)
-library(ggregplot); library(data.table)
+library(ggregplot); library(data.table);library(fs)
 
 theme_set(theme_cowplot())
+
+dir_create("Intermediate")
+dir_create("Output Files")
 
 Panth1 <- read.delim("Data/PanTHERIA_1-0_WR05_Aug2008.txt") %>%
   dplyr::rename_all(~str_replace(.x, "MSW05_", "h")) %>%
@@ -27,7 +30,8 @@ PredictedNetwork <-
 
 rownames(PredictedNetwork) <- colnames(PredictedNetwork)
 
-read.csv("Data/Virionette/03_interaction_data/virionette.csv") ->
+read.csv(paste0(here::here(), 
+                "/Github/Repos/virionette/03_interaction_data/virionette.csv")) ->
   
   BetaCovHosts
 
