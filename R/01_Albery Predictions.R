@@ -6,14 +6,15 @@
 # Prediction ####
 
 library(ggrepel); library(tidyverse); library(SpRanger); library(cowplot); library(patchwork)
-library(ggregplot); library(data.table);library(fs)
+library(ggregplot); library(data.table);library(fs); library(zip)
 
 theme_set(theme_cowplot())
 
 dir_create("Intermediate")
 dir_create("Output Files")
 
-Panth1 <- read.delim("Data/PanTHERIA_1-0_WR05_Aug2008.txt") %>%
+Panth1 <- 
+  read.delim("Data/PanTHERIA_1-0_WR05_Aug2008.txt") %>%
   dplyr::rename_all(~str_replace(.x, "MSW05_", "h")) %>%
   rename(Sp = hBinomial)
 
@@ -21,7 +22,13 @@ Panth1$Sp <- Panth1$Sp %>% str_replace(" ", "_")
 
 # load("~/LargeFiles/MammalStackFullMercator.Rdata")
 
-PredictedNetwork <- fread("Data/AlberyPredicted.csv") %>% mutate_all(as.numeric)
+if(!file.exists("Data/PredictedNetwork.csv")){
+  
+  unzip("PredictedNetwork.zip", exdir = "Data")
+  
+}
+
+PredictedNetwork <- fread("Data/PredictedNetwork.csv") %>% mutate_all(as.numeric)
 
 PredictedNetwork %>% as.matrix -> PredictedNetwork
 
@@ -56,7 +63,7 @@ NetworkPredict(BetaCovBats, (PredictedNetwork), IncludeObserved = T) %>%
 
 BetaCovPredictedBats %>% 
   dplyr::select(Sp, Count) %>%
-  write.csv("AlberyBats.csv")
+  write.csv("Output Files/AlberyBats.csv")
 
 # Non-Bats ####
 
@@ -79,7 +86,7 @@ NetworkPredict(BetaCovMammals, (PredictedNetwork), IncludeObserved = T) %>%
 
 BetaCovPredictedMammals %>% 
   dplyr::select(Sp, Count) %>%
-  write.csv("AlberyNonBats.csv")
+  write.csv("Output Files/AlberyNonBats.csv")
 
 
 # R_affinis ####
@@ -135,15 +142,17 @@ R_affinisPredictedBats %>%
               mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
               slice(1:20) %>% dplyr::select(Sp)) %>%
   rename(`R.affinis` = Sp, `R.malayanus` = Sp1) %>% 
-  write.csv("Output Files/AlberyRhinolophusBatPredictions.csv", row.names = F)
+  write.csv("Output Files/AlberyRhinolophusBatPredictions.csv", 
+            row.names = F)
 
 R_affinisPredictedNonBats %>% 
   mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
   mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
-  slice(1:20) %>% dplyr::select(Sp) %>%
+  slice(1:20) %>% dplyr::select(Sp, Family = hFamily) %>%
   bind_cols(R_malayanusPredictedNonBats %>% 
               mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
               mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
-              slice(1:20) %>% dplyr::select(Sp)) %>%
+              slice(1:20) %>% dplyr::select(Sp, Family = hFamily)) %>%
   rename(`R.affinis` = Sp, `R.malayanus` = Sp1) %>% 
-  write.csv("Output Files/AlberyRhinolophusNonBatPredictions.csv", row.names = F)
+  write.csv("Output Files/AlberyRhinolophusNonBatPredictions.csv", 
+            row.names = F)
