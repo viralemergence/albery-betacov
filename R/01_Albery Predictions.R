@@ -6,7 +6,9 @@
 # Prediction ####
 
 library(ggrepel); library(tidyverse); library(SpRanger); library(cowplot); library(patchwork)
-library(ggregplot); library(data.table);library(fs); library(zip)
+library(ggregplot); library(data.table);library(fs); library(zip); library(conflicted)
+
+conflict_prefer("filter", "dplyr")
 
 theme_set(theme_cowplot())
 
