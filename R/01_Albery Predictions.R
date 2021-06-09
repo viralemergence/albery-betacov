@@ -143,7 +143,7 @@ R_affinisPredictedBats %>%
               mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
               mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
               slice(1:20) %>% dplyr::select(Sp)) %>%
-  rename(`R.affinis` = Sp, `R.malayanus` = Sp1) %>% 
+  rename(`R.affinis` = 1, `R.malayanus` = 2) %>% 
   write.csv("Output Files/AlberyRhinolophusBatPredictions.csv", 
             row.names = F)
 
@@ -155,6 +155,6 @@ R_affinisPredictedNonBats %>%
               mutate_at("Sp", ~str_replace_all(.x, "_", " ")) %>%
               mutate(Sp = glue::glue("{1:n()}. {Sp} (P={Count})")) %>%
               slice(1:20) %>% dplyr::select(Sp, Family = hFamily)) %>%
-  rename(`R.affinis` = Sp, `R.malayanus` = Sp1) %>% 
+  rename(`R.affinis` = 1, `R.malayanus` = 3) %>% 
   write.csv("Output Files/AlberyRhinolophusNonBatPredictions.csv", 
             row.names = F)
